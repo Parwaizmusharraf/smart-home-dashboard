@@ -1,4 +1,4 @@
-# smart-home-dashboard
+
 # 🏠 Smart Home Dashboard – UI/UX Project
 
 A modern, responsive smart home control dashboard designed during my UI/UX internship.
