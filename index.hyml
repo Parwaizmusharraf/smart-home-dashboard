@@ -1,0 +1,532 @@
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta content="width=device-width, initial-scale=1" name="viewport" />
+  <title>Smart Home Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css"
+    rel="stylesheet"
+  />
+  <style>
+    @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap");
+    body {
+      font-family: "Inter", sans-serif;
+    }
+  </style>
+</head>
+<body class="bg-[#d9dee3] flex justify-center items-center min-h-screen p-4">
+  <div
+    id="app"
+    class="relative flex flex-col md:flex-row gap-6 rounded-[30px] bg-gradient-to-br from-[#0a0a0a] to-[#1a1a1a] p-6 max-w-[900px] md:max-w-[1100px] shadow-[0_0_30px_rgba(0,0,0,0.7)]"
+    style="clip-path: polygon(0 0, calc(100% - 30px) 0, 100% 30px, 100% 100%, 0 100%)"
+  >
+    <!-- Left side main panel -->
+    <div class="flex flex-col gap-6 w-full md:w-[65%]">
+      <!-- Top bar -->
+      <div
+        class="flex items-center justify-between text-white text-sm font-semibold"
+      >
+        <div class="flex items-center gap-3">
+          <button aria-label="Menu" class="text-white text-xl">
+            <i class="fas fa-bars"></i>
+          </button>
+          <span>{{ currentDate }}</span>
+        </div>
+        <nav
+          class="flex gap-6 text-gray-400 text-xs md:text-sm font-normal"
+        >
+          <a
+            v-for="room in rooms"
+            :key="room"
+            href="#"
+            :class="{
+              'text-white font-semibold': room === selectedRoom,
+            }"
+            @click.prevent="selectRoom(room)"
+            >{{ room }}</a
+          >
+        </nav>
+        <div>
+          <img
+            alt="User avatar with warm brown background"
+            class="w-10 h-10 rounded-full hidden md:block"
+            height="40"
+            src="https://storage.googleapis.com/a1aa/image/880de7e7-5408-4fde-2e61-77e9337c767d.jpg"
+            width="40"
+          />
+        </div>
+      </div>
+      <!-- Weather and Music row -->
+      <div class="flex flex-col sm:flex-row gap-6">
+        <!-- Weather -->
+        <div
+          class="relative flex flex-col justify-center items-center w-full sm:w-[120px] h-[120px] rounded-xl bg-gradient-to-tr from-[#f9d423] via-[#ff4e50] to-[#f9d423] shadow-[0_0_20px_rgba(249,212,35,0.7)]"
+        >
+          <img
+            alt="Sun partially covered by white clouds with subtle shadow"
+            class="absolute -top-6 left-4 w-[80px] h-[60px] object-contain"
+            height="60"
+            src="https://storage.googleapis.com/a1aa/image/dc2ad660-59bd-49b8-1218-67e4a6ccedf3.jpg"
+            width="80"
+          />
+          <div
+            class="absolute top-10 right-2 bg-black bg-opacity-50 rounded-lg px-3 py-2 text-white text-center text-sm font-semibold"
+            style="backdrop-filter: blur(8px)"
+          >
+            <div class="text-3xl font-bold leading-none">{{ weather.temp }}°</div>
+            <div class="mt-1 font-normal text-xs leading-tight max-w-[90px]">
+              {{ weather.description }}
+            </div>
+          </div>
+        </div>
+        <!-- Music Player -->
+        <div
+          class="relative w-full sm:w-[220px] h-[140px] rounded-xl bg-gradient-to-tr from-[#2a2a2a] to-[#1a1a1a] shadow-[0_0_20px_rgba(0,0,0,0.7)]"
+          style="backdrop-filter: blur(8px)"
+        >
+          <img
+            alt="Young man looking down wearing a hoodie in dim light"
+            class="rounded-xl object-cover w-full h-full"
+            height="140"
+            src="https://storage.googleapis.com/a1aa/image/0b1a3316-818f-4f6a-c67c-219dffff1ec7.jpg"
+            width="220"
+          />
+          <div
+            class="absolute bottom-4 left-4 text-white text-xs font-semibold drop-shadow-[0_0_3px_rgba(0,0,0,0.8)]"
+          >
+            Never Say Never
+            <div class="font-normal text-[10px] mt-0.5">Parwaiz Musharraf</div>
+          </div>
+          <div
+            class="absolute bottom-4 right-4 text-white text-xs cursor-pointer drop-shadow-[0_0_3px_rgba(0,0,0,0.8)]"
+            @click="toggleFavorite"
+          >
+            <i :class="favorite ? 'fas fa-heart' : 'far fa-heart'"></i>
+          </div>
+          <div
+            class="absolute bottom-2 left-4 right-4 flex items-center gap-4 text-white text-sm"
+          >
+            <i class="fas fa-backward cursor-pointer" @click="prevSong"></i>
+            <button
+              aria-label="Play"
+              class="w-8 h-8 rounded-full bg-white text-black flex items-center justify-center"
+              @click="togglePlay"
+            >
+              <i :class="isPlaying ? 'fas fa-pause' : 'fas fa-play'"></i>
+            </button>
+            <i class="fas fa-forward cursor-pointer" @click="nextSong"></i>
+          </div>
+          <input
+            class="absolute bottom-10 left-4 right-4 w-[calc(100%-32px)] appearance-none h-1 rounded-full bg-white/30 cursor-pointer"
+            max="100"
+            min="0"
+            type="range"
+            v-model="progress"
+            @input="seek"
+          />
+        </div>
+      </div>
+      <!-- Lighting and smaller widgets grid -->
+      <div class="grid grid-cols-3 grid-rows-3 gap-4 mt-2">
+        <!-- Lighting -->
+        <div
+          class="col-span-2 row-span-2 rounded-xl bg-gradient-to-tr from-[#2a2a1a] to-[#1a1a0a] p-5 relative shadow-[0_0_20px_rgba(0,0,0,0.7)]"
+          style="backdrop-filter: blur(8px)"
+        >
+          <div
+            class="flex justify-between items-start text-white font-semibold text-sm mb-3"
+          >
+            <span>Lighting</span>
+            <button
+              aria-label="Power toggle"
+              class="w-7 h-7 rounded-full bg-[#ff6a00] flex items-center justify-center text-white text-xs"
+              @click="toggleLight"
+            >
+              <i class="fas fa-power-off"></i>
+            </button>
+          </div>
+          <div class="flex gap-6">
+            <!-- Color wheel -->
+            <div
+              class="relative w-24 h-24 rounded-full bg-gradient-to-tr from-cyan-400 via-yellow-400 to-orange-600 flex items-center justify-center"
+            >
+              <div
+                class="absolute inset-4 rounded-full bg-gradient-to-tr from-[#0a0a0a] to-[#1a1a1a] flex flex-col items-center justify-center text-white font-semibold text-xs"
+              >
+                <div class="text-sm">Intensity</div>
+                <div class="text-2xl font-bold leading-none">{{ lightIntensity }}%</div>
+              </div>
+            </div>
+            <!-- Lamp image -->
+            <div class="flex-1 relative">
+              <img
+                alt="Modern hanging lamp glowing with warm white light"
+                class="w-[100px] h-[100px] object-contain"
+                height="100"
+                src="https://storage.googleapis.com/a1aa/image/6e470090-9fc5-4202-f148-9d70e9da5373.jpg"
+                width="100"
+              />
+              <input
+                class="w-full mt-4"
+                max="100"
+                min="0"
+                style="accent-color: #f9d423"
+                type="range"
+                v-model="lightIntensity"
+              />
+            </div>
+            <!-- Modes -->
+            <div
+              class="flex flex-col justify-center text-white text-xs font-semibold space-y-2 ml-4"
+            >
+              <button
+                v-for="mode in lightModes"
+                :key="mode"
+                :class="{
+                  'opacity-100 font-bold': mode === selectedLightMode,
+                  'opacity-50 hover:opacity-100': mode !== selectedLightMode,
+                }"
+                @click="selectedLightMode = mode"
+              >
+                {{ mode }}
+              </button>
+            </div>
+          </div>
+        </div>
+        <!-- Camera -->
+        <div
+          class="rounded-xl bg-gradient-to-tr from-[#1a1a1a] to-[#2a2a2a] p-3 relative shadow-[0_0_20px_rgba(0,0,0,0.7)] flex flex-col items-center gap-2"
+          style="backdrop-filter: blur(8px)"
+        >
+          <div
+            class="flex justify-between w-full items-center text-white font-semibold text-sm mb-1"
+          >
+            <span>Camera</span>
+            <button
+              aria-label="Power toggle"
+              class="w-6 h-6 rounded-full bg-[#222222] flex items-center justify-center text-white text-xs"
+              @click="toggleCamera"
+            >
+              <i class="fas fa-power-off"></i>
+            </button>
+          </div>
+          <img
+            alt="Small security camera device with lens and sensor"
+            class="w-20 h-20 object-contain rounded-lg"
+            height="80"
+            src="https://storage.googleapis.com/a1aa/image/268485d7-4663-4429-c30c-ba4afb5a5c24.jpg"
+            width="80"
+          />
+        </div>
+        <!-- Robotic Vacuum -->
+        <div
+          class="rounded-xl bg-gradient-to-tr from-[#2a2a2a] to-[#1a1a1a] p-3 relative shadow-[0_0_20px_rgba(0,0,0,0.7)]"
+          style="backdrop-filter: blur(8px)"
+        >
+          <div
+            class="flex justify-between items-start text-white font-semibold text-sm mb-2"
+          >
+            <span>Robotic Vacuum</span>
+            <button
+              aria-label="Power toggle"
+              class="w-7 h-7 rounded-full bg-[#ff6a00] flex items-center justify-center text-white text-xs"
+              @click="toggleVacuum"
+            >
+              <i class="fas fa-power-off"></i>
+            </button>
+          </div>
+          <div class="relative flex justify-center mb-2">
+            <img
+              alt="Robotic vacuum cleaner top view with speech bubble"
+              class="w-[120px] h-[80px] object-contain"
+              height="80"
+              src="https://storage.googleapis.com/a1aa/image/f4ba73f2-809d-4165-5ad2-8ab1df340a5a.jpg"
+              width="120"
+            />
+            <div
+              class="absolute top-1 left-6 bg-gray-800 bg-opacity-80 text-white text-[10px] rounded px-2 py-1"
+              style="backdrop-filter: blur(6px)"
+            >
+              I'm almost done!
+            </div>
+          </div>
+          <div
+            class="flex justify-between mb-3 text-white text-xs font-semibold"
+          >
+            <div class="flex flex-col items-center gap-1">
+              <i class="fas fa-cube text-lg"></i>
+              <span>25 M²</span>
+            </div>
+            <div class="flex flex-col items-center gap-1">
+              <i class="fas fa-bolt text-lg"></i>
+              <span>25%</span>
+            </div>
+            <div class="flex flex-col items-center gap-1">
+              <i class="fas fa-clock text-lg"></i>
+              <span>15 Min Left</span>
+            </div>
+          </div>
+          <div class="flex gap-3">
+            <button
+              class="flex-1 bg-white text-black rounded-lg py-1 font-semibold text-sm"
+              @click="goDock"
+            >
+              Go Dock
+            </button>
+            <button
+              class="flex-1 border border-white border-opacity-40 rounded-lg py-1 font-normal text-white text-sm"
+              @click="pushVacuum"
+            >
+              Push
+            </button>
+          </div>
+        </div>
+        <!-- Electricity -->
+        <div
+          class="col-span-1 row-span-1 rounded-xl bg-gradient-to-tr from-[#2a1a1a] to-[#1a0a0a] p-4 relative shadow-[0_0_20px_rgba(0,0,0,0.7)]"
+          style="backdrop-filter: blur(8px); transform: rotate(-6deg)"
+        >
+          <div
+            class="flex justify-between items-center text-white font-semibold text-sm mb-3"
+          >
+            <span>Electricity</span>
+            <select
+              aria-label="Select month"
+              class="bg-[#222222] text-white text-xs rounded px-2 py-1 cursor-pointer"
+              v-model="electricityMonth"
+              @change="fetchElectricityData"
+            >
+              <option>Month</option>
+              <option v-for="m in months" :key="m" :value="m">{{ m }}</option>
+            </select>
+          </div>
+          <svg
+            class="w-full h-16"
+            fill="none"
+            viewBox="0 0 100 50"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M0 30 Q20 10 40 20 T100 25"
+              fill="none"
+              stroke="#ff6a00"
+              stroke-width="2"
+            ></path>
+            <circle cx="40" cy="20" fill="#ff6a00" r="3"></circle>
+          </svg>
+          <div class="text-white font-semibold text-lg mt-2 text-center">
+            {{ electricityUsage }}kw
+          </div>
+        </div>
+        <!-- Wi-Fi -->
+        <div
+          class="rounded-xl bg-gradient-to-tr from-[#1a1a1a] to-[#2a2a2a] p-3 relative shadow-[0_0_20px_rgba(0,0,0,0.7)] flex flex-col items-center gap-2"
+          style="backdrop-filter: blur(8px)"
+        >
+          <div
+            class="flex justify-between w-full items-center text-white font-semibold text-sm mb-1"
+          >
+            <span>Wi-Fi</span>
+            <button
+              aria-label="Power toggle"
+              class="w-7 h-7 rounded-full bg-[#ff6a00] flex items-center justify-center text-white text-xs"
+              @click="toggleWiFi"
+            >
+              <i class="fas fa-power-off"></i>
+            </button>
+          </div>
+          <img
+            alt="Wi-Fi router device with antennas and lights"
+            class="w-[100px] h-[60px] object-contain rounded-lg"
+            height="60"
+            src="https://storage.googleapis.com/a1aa/image/8fa85971-2464-4dfb-e600-cf938626e9c3.jpg"
+            width="100"
+          />
+        </div>
+      </div>
+    </div>
+    <!-- Right side Air Conditioning panel -->
+    <div
+      class="w-full md:w-[35%] rounded-xl bg-gradient-to-tr from-[#1a2a3a] to-[#0a1a2a] p-6 flex flex-col justify-between shadow-[0_0_30px_rgba(0,0,0,0.7)]"
+      style="backdrop-filter: blur(8px)"
+    >
+      <div>
+        <div
+          class="flex justify-between items-start text-white font-semibold text-sm mb-4"
+        >
+          <span>Air Conditioning</span>
+          <button
+            aria-label="Power toggle"
+            class="w-7 h-7 rounded-full bg-[#ff6a00] flex items-center justify-center text-white text-xs"
+            @click="toggleAC"
+          >
+            <i class="fas fa-power-off"></i>
+          </button>
+        </div>
+        <img
+          alt="Modern air conditioner unit with blue light vents"
+          class="w-full h-[80px] object-contain mb-6"
+          height="80"
+          src="https://storage.googleapis.com/a1aa/image/8ccc4ce2-258a-4fef-0419-c1757a86c659.jpg"
+          width="280"
+        />
+        <div class="relative w-full h-[160px] mb-6">
+          <svg
+            class="w-full h-full"
+            viewBox="0 0 200 200"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <defs>
+              <radialGradient cx="50%" cy="50%" id="coolGradient" r="50%">
+                <stop offset="0%" stop-color="#3b82f6" stop-opacity="0.8" />
+                <stop offset="100%" stop-color="#1e40af" stop-opacity="0.8" />
+              </radialGradient>
+            </defs>
+            <circle
+              cx="100"
+              cy="100"
+              fill="url(#coolGradient)"
+              filter="url(#blur)"
+              r="90"
+            />
+          </svg>
+          <div
+            class="absolute inset-0 flex flex-col items-center justify-center text-white font-semibold"
+          >
+            <div class="text-xs mb-1">{{ acMode }}</div>
+            <div class="text-4xl font-bold leading-none">{{ acTemp }}°C</div>
+          </div>
+          <div
+            class="absolute top-4 left-4 text-white text-xs font-semibold select-none"
+          >
+            20°C
+          </div>
+          <div
+            class="absolute bottom-4 left-4 text-white text-xs font-semibold select-none"
+          >
+            10°C
+          </div>
+          <div
+            class="absolute bottom-4 right-4 text-white text-xs font-semibold select-none"
+          >
+            30°C
+          </div>
+          <div
+            class="absolute top-4 right-4 text-white text-xs font-semibold select-none"
+          >
+            0°C
+          </div>
+        </div>
+        <div class="flex gap-3 mb-6">
+          <button
+            class="flex-1 bg-[#3b82f6] rounded-lg py-2 text-white font-semibold text-sm flex items-center justify-center gap-2"
+            :class="{ 'bg-[#3b82f6]': acMode === 'Cooling', 'bg-[#222222]': acMode !== 'Cooling' }"
+            @click="setACMode('Cooling')"
+          >
+            <i class="fas fa-snowflake"></i> Cooling
+          </button>
+          <button
+            class="flex-1 rounded-lg py-2 text-white font-normal text-sm flex items-center justify-center gap-2"
+            :class="{ 'bg-[#3b82f6]': acMode === 'Heating', 'bg-[#222222]': acMode !== 'Heating' }"
+            @click="setACMode('Heating')"
+          >
+            <i class="fas fa-thermometer-half"></i> Heating
+          </button>
+          <button
+            class="flex-1 rounded-lg py-2 text-white font-normal text-sm flex items-center justify-center gap-2"
+            :class="{ 'bg-[#3b82f6]': acMode === 'Airwave', 'bg-[#222222]': acMode !== 'Airwave' }"
+            @click="setACMode('Airwave')"
+          >
+            <i class="fas fa-wind"></i> Airwave
+          </button>
+        </div>
+      </div>
+      <div class="flex gap-4 text-white text-xs font-semibold">
+        <div
+          class="flex-1 bg-[#222222] rounded-lg p-3 flex flex-col items-center gap-1"
+        >
+          <i class="fas fa-clock text-lg"></i>
+          <div>Timer</div>
+          <div class="text-2xl font-bold leading-none">{{ acTimer }}</div>
+          <div>Hours</div>
+        </div>
+        <div
+          class="flex-1 bg-[#222222] rounded-lg p-3 flex flex-col items-center gap-1"
+        >
+          <i class="fas fa-tint text-lg"></i>
+          <div>Humidity</div>
+          <div class="text-2xl font-bold leading-none">{{ acHumidity }}</div>
+          <div>%</div>
+        </div>
+      </div>
+      <footer class="mt-6 text-center text-white text-xs opacity-50">
+        © 2025 Parwaiz Musharraf
+      </footer>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+  <script>
+    const { createApp } = Vue;
+
+    createApp({
+      data() {
+        return {
+          currentDate: "Thu, Jan 12",
+          rooms: ["Living room", "Bedroom", "Kitchen", "Office", "Bathroom"],
+          selectedRoom: "Living room",
+          weather: {
+            temp: 31,
+            description: "Today will be cloudy. Apply SPF during the day.",
+          },
+          favorite: false,
+          isPlaying: false,
+          progress: 30,
+          lightIntensity: 80,
+          selectedLightMode: "Working",
+          lightModes: ["Reading", "Working", "Romantic"],
+          cameraOn: true,
+          vacuumOn: true,
+          electricityMonth: "Month",
+          months: [
+            "January",
+            "February",
+            "March",
+            "April",
+            "May",
+            "June",
+            "July",
+            "August",
+            "September",
+            "October",
+            "November",
+            "December",
+          ],
+          electricityUsage: 360,
+          wifiOn: true,
+          acOn: true,
+          acMode: "Cooling",
+          acTemp: 23,
+          acTimer: 2,
+          acHumidity: 36,
+        };
+      },
+      methods: {
+        selectRoom(room) {
+          this.selectedRoom = room;
+        },
+        toggleFavorite() {
+          this.favorite = !this.favorite;
+        },
+        togglePlay() {
+          this.isPlaying = !this.isPlaying;
+        },
+        prevSong() {
+          alert("Previous song clicked");
+        },
+        nextSong() {
+          alert("Next song clicked");
+        },
+        seek() {
+          // Simulate see
